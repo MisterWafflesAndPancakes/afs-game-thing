@@ -8,7 +8,7 @@ local function getHRP()
 end
 
 -- Autofarm State
-local TargetTier = "1"
+local TargetTier = {"1"}
 local CurrentMob = nil
 local running = false
 
@@ -96,9 +96,9 @@ end
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "Mob Teleport Autofarm",
-    LoadingTitle = "Loading...",
-    LoadingSubtitle = "Rayfield UI",
+    Name = "AFS Mob Autofarm",
+    LoadingTitle = "AFS Mob Autofarm",
+    LoadingSubtitle = "Made by XestorIae",
     ConfigurationSaving = {
         Enabled = false
     }
@@ -109,7 +109,7 @@ local Tab = Window:CreateTab("Autofarm")
 
 -- Dropbown
 Tab:CreateDropdown({
-    Name = "Select Mob Tier",
+    Name = "Select Enemy Tier",
     Options = {"1", "2", "3", "4", "5", "6"},
     CurrentOption = {"1"},
     Callback = function(option)
@@ -128,5 +128,59 @@ Tab:CreateToggle({
         else
             stopLoop()
         end
+    end
+})
+
+
+local Boxes = workspace.Scriptable.ChikaraBoxes
+
+local function scanForClickDetectors()
+    for _, box in ipairs(Boxes:GetChildren()) do
+        for _, obj in ipairs(box:GetDescendants()) do
+            if obj:IsA("ClickDetector") then
+                fireclickdetector(obj, 0)
+            end
+        end
+    end
+end
+
+local function startBoxLoop()
+    if runningBoxes then return end
+    runningBoxes = true
+
+    boxLoopThread = task.spawn(function()
+        while runningBoxes do
+            scanForClickDetectors()
+            task.wait(boxDelay)
+        end
+    end)
+end
+
+local function stopBoxLoop()
+    runningBoxes = false
+end
+
+local ClickTab = Window:CreateTab("Auto Chikara Box")
+
+ClickTab:CreateToggle({
+    Name = "Auto Click Chikara Boxes",
+    CurrentValue = false,
+    Callback = function(state)
+        if state then
+            startBoxLoop()
+        else
+            stopBoxLoop()
+        end
+    end
+})
+
+ClickTab:CreateSlider({
+    Name = "Scan Delay",
+    Range = {0.1, 5},
+    Increment = 0.1,
+    Suffix = "s",
+    CurrentValue = 1,
+    Callback = function(value)
+        boxDelay = value
     end
 })
