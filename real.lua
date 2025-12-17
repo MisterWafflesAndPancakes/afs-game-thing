@@ -187,13 +187,13 @@ ClickTab:CreateSlider({
     end
 })
 
-local AFKTab = Window:CreateTab("Anti-Afk")
-
 -- Anti-AFK related stuff
 local antiAFKEnabled = false
 local antiAFKConnection
 
-AutoFarmTab:CreateToggle({
+local AFKTab = Window:CreateTab("Anti-Afk")
+
+AFKTab:CreateToggle({
     Name = "Anti-AFK",
     CurrentValue = false,
     Flag = "AntiAFKToggle",
