@@ -1,7 +1,9 @@
 -- References
 local Mobs = workspace.Scriptable.Mobs
 local Player = game.Players.LocalPlayer
+local LocalPlayer = game.Players.LocalPlayer -- Anti afk logic stuff
 
+-- Get HumanoidRootPart
 local function getHRP()
     local char = Player.Character
     return char and char:FindFirstChild("HumanoidRootPart")
@@ -183,4 +185,33 @@ ClickTab:CreateSlider({
     Callback = function(value)
         boxDelay = value
     end
+})
+
+local AFKTab = Window:CreateTab("Anti-Afk")
+
+-- Anti-AFK related stuff
+local antiAFKEnabled = false
+local antiAFKConnection
+
+AutoFarmTab:CreateToggle({
+    Name = "Anti-AFK",
+    CurrentValue = false,
+    Flag = "AntiAFKToggle",
+    Callback = function(Value)
+        antiAFKEnabled = Value
+
+        if antiAFKEnabled then
+            -- Connect anti-AFK
+            antiAFKConnection = LocalPlayer.Idled:Connect(function()
+                VirtualUser:CaptureController()
+                VirtualUser:ClickButton2(Vector2.new())
+            end)
+        else
+            -- Disconnect anti-AFK
+            if antiAFKConnection then
+                antiAFKConnection:Disconnect()
+                antiAFKConnection = nil
+            end
+        end
+    end,
 })
