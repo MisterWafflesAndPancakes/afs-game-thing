@@ -2,6 +2,7 @@
 local Mobs = workspace.Scriptable.Mobs
 local Player = game.Players.LocalPlayer
 local LocalPlayer = game.Players.LocalPlayer -- Anti afk logic stuff
+local RunService = game:GetService("RunService")
 
 -- Get HumanoidRootPart
 local function getHRP()
@@ -10,9 +11,10 @@ local function getHRP()
 end
 
 -- Autofarm State
-local TargetTier = {"1"}
+local TargetTier = "1"
 local CurrentMob = nil
-local running = false
+local running = true
+local cycleTiers = true -- enabled at runtime    
 
 -- Helpers
 local function getMobsOfTier(tier)
@@ -52,7 +54,7 @@ local function getNextMob(tier, current)
     return mobs[1]
 end
 
--- STart function
+-- Start function
 local function startLoop()
     running = true
 
@@ -66,7 +68,7 @@ local function startLoop()
         renderConnection = nil
     end
 
-    renderConnection = RunService.RenderStepped:Connect(function()
+    renderConnection = RunService.Heartbeat:Connect(function()
         if not running then return end
 
         -- Ensure valid mob
@@ -77,7 +79,16 @@ local function startLoop()
 
         -- Switch mob if dead
         if getHealth(CurrentMob) <= 0 then
-            CurrentMob = getNextMob(TargetTier, CurrentMob)
+            local mobs = getMobsOfTier(TargetTier)
+            local nextMob = getNextMob(TargetTier, CurrentMob)
+
+            -- If cycling is enabled and we loop back to the first mob, cycle tier
+            if cycleTiers and nextMob == mobs[1] then
+                cycleTier()
+                return
+            end
+
+            CurrentMob = nextMob
             return
         end
 
@@ -94,6 +105,26 @@ local function stopLoop()
         renderConnection = nil
     end
 end
+
+local AllTiers = {"1", "2", "3", "4", "5", "6"}
+
+local function cycleTier()
+    -- Find current tier index
+    local index
+    for i, tier in ipairs(AllTiers) do
+        if tier == TargetTier then
+            index = i
+            break
+        end
+    end
+
+    -- Move to next tier (wrap around)
+    local nextIndex = (index % #AllTiers) + 1
+    TargetTier = AllTiers[nextIndex]
+
+    -- Reset mob so loop picks new tier
+    CurrentMob = nil
+end    
 
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
@@ -120,6 +151,14 @@ Tab:CreateDropdown({
     end
 })
 
+Tab:CreateToggle({
+    Name = "Cycle Tiers",
+    CurrentValue = true, -- enabled at runtime
+    Callback = function(Value)
+        cycleTiers = Value
+    end,
+})
+
 -- On off switch
 Tab:CreateToggle({
     Name = "Toggle Autofarm",
@@ -139,12 +178,15 @@ local Boxes = workspace.Scriptable.ChikaraBoxes
 local function scanForClickDetectors()
     for _, box in ipairs(Boxes:GetChildren()) do
         for _, obj in ipairs(box:GetDescendants()) do
-            if obj:IsA("ClickDetector") then
-                fireclickdetector(obj, 0)
+            if obj:IsA("ClickDetector") and obj.Parent then
+                pcall(function()
+                    fireclickdetector(obj, 0)
+                end)
             end
         end
     end
 end
+
 
 local function startBoxLoop()
     if runningBoxes then return end
@@ -153,7 +195,7 @@ local function startBoxLoop()
     boxLoopThread = task.spawn(function()
         while runningBoxes do
             scanForClickDetectors()
-            task.wait(boxDelay)
+            task.wait(boxDelay or 0.2) -- safe default
         end
     end)
 end
@@ -166,7 +208,7 @@ local ClickTab = Window:CreateTab("Auto Chikara Box")
 
 ClickTab:CreateToggle({
     Name = "Auto Click Chikara Boxes",
-    CurrentValue = false,
+    CurrentValue = true,
     Callback = function(state)
         if state then
             startBoxLoop()
@@ -177,7 +219,7 @@ ClickTab:CreateToggle({
 })
 
 ClickTab:CreateSlider({
-    Name = "Scan Delay",
+    Name = "Click delay",
     Range = {0.1, 5},
     Increment = 0.1,
     Suffix = "s",
