@@ -3,6 +3,8 @@ local Mobs = workspace.Scriptable.Mobs
 local Player = game.Players.LocalPlayer
 local LocalPlayer = game.Players.LocalPlayer -- Anti afk logic stuff
 local RunService = game:GetService("RunService")
+local TS = game:GetService("TeleportService")
+
 
 -- Get HumanoidRootPart
 local function getHRP()
@@ -255,5 +257,57 @@ AFKTab:CreateToggle({
                 antiAFKConnection = nil
             end
         end
+    end,
+})
+
+local preventRejoin = false
+local TS = game:GetService("TeleportService")
+
+-- Store original functions
+local oldTeleport = TS.Teleport
+local oldTeleportToPlaceInstance = TS.TeleportToPlaceInstance
+
+-- Hooked versions
+local function blockedTeleport(...)
+    if preventRejoin then
+        Rayfield:Notify({
+            Title = "Rejoin Blocked",
+            Content = "The game attempted to rejoin you.",
+            Duration = 4
+        })
+        return nil
+    end
+    return oldTeleport(...)
+end
+
+local function blockedTeleportInstance(...)
+    if preventRejoin then
+        Rayfield:Notify({
+            Title = "Rejoin Blocked",
+            Content = "The game attempted to rejoin you.",
+            Duration = 4
+        })
+        return nil
+    end
+    return oldTeleportToPlaceInstance(...)
+end
+
+-- Apply hooks
+hookfunction(TS.Teleport, blockedTeleport)
+hookfunction(TS.TeleportToPlaceInstance, blockedTeleportInstance)
+
+local TPTab = Window:CreateTab("Client sided block")
+
+TPTab:CreateToggle({
+    Name = "Prevent Auto rejoin",
+    CurrentValue = false,
+    Callback = function(Value)
+        preventRejoin = Value
+
+        Rayfield:Notify({
+            Title = "Auto-Rejoin",
+            Content = Value and "Blocking rejoin attempts." or "Rejoin blocking disabled.",
+            Duration = 3
+        })
     end,
 })
